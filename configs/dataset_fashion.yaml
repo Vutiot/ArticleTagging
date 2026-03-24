@@ -1,0 +1,7 @@
+schema_path: configs/schemas/fashion.yaml
+split_ratio: [0.8, 0.1, 0.1]
+text_only: false
+system_prompt: "You extract product attributes from the title and image. Respond with valid JSON only."
+min_samples: 100
+deduplicate: true
+category_field: masterCategory

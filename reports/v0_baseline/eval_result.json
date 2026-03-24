@@ -1,0 +1,20 @@
+{
+  "exact_match": 0.0,
+  "per_attribute": {
+    "gender": 0.88,
+    "masterCategory": 0.04,
+    "subCategory": 0.02,
+    "articleType": 0.08,
+    "baseColour": 0.76,
+    "season": 0.04,
+    "usage": 0.32
+  },
+  "category_breakdown": {
+    "Accessories": 0.0,
+    "Apparel": 0.0,
+    "Footwear": 0.0,
+    "Personal Care": 0.0
+  },
+  "total_samples": 50,
+  "timestamp": "2026-03-24T20:42:58.838068+00:00"
+}

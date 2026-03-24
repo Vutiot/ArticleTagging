@@ -1,0 +1,128 @@
+# Dataset schema for Kaggle Fashion Product Images Dataset
+# Source: https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small
+name: fashion
+
+# Stratify splits by masterCategory for balanced representation
+category_field: masterCategory
+
+attributes:
+  - name: gender
+    type: enum
+    values: [Men, Women, Boys, Girls, Unisex]
+    required: true
+
+  - name: masterCategory
+    type: enum
+    values: [Apparel, Accessories, Footwear, Personal Care, Free Items, Sporting Goods, Home]
+    required: true
+
+  - name: subCategory
+    type: enum
+    values:
+      - Topwear
+      - Bottomwear
+      - Innerwear
+      - Dress
+      - Loungewear and Nightwear
+      - Saree
+      - Flip Flops
+      - Shoes
+      - Sandal
+      - Watches
+      - Bags
+      - Belts
+      - Wallets
+      - Eyewear
+      - Socks
+      - Ties
+      - Headwear
+      - Scarves
+      - Jewellery
+      - Fragrance
+      - Lips
+      - Nails
+      - Skin Care
+      - Skin
+      - Hair
+      - Eyes
+      - Accessories
+      - Cufflinks
+      - Sports Equipment
+      - Stoles
+      - Apparel Set
+      - Mufflers
+      - Free Gifts
+      - Perfumes
+      - Umbrellas
+      - Vouchers
+      - Water Bottle
+      - Gloves
+      - Sport Accessories
+      - Home Furnishing
+      - Bath and Body
+      - Sports Accessories
+      - Shoe Accessories
+    required: false
+    depends_on: masterCategory
+
+  - name: articleType
+    type: string
+    required: true
+    depends_on: subCategory
+
+  - name: baseColour
+    type: enum
+    values:
+      - Black
+      - White
+      - Blue
+      - Navy Blue
+      - Grey
+      - Red
+      - Green
+      - Brown
+      - Pink
+      - Purple
+      - Yellow
+      - Orange
+      - Beige
+      - Maroon
+      - Cream
+      - Gold
+      - Silver
+      - Olive
+      - Khaki
+      - Multi
+      - Teal
+      - Peach
+      - Lavender
+      - Burgundy
+      - Magenta
+      - Turquoise Blue
+      - Charcoal
+      - Mauve
+      - Tan
+      - Nude
+      - Off White
+      - Rust
+      - Copper
+      - Grey Melange
+      - Taupe
+      - Lime Green
+      - Fluorescent Green
+      - Sea Green
+      - Metallic
+      - Rose
+      - Mushroom Brown
+      - Steel
+    required: false
+
+  - name: season
+    type: enum
+    values: [Summer, Winter, Fall, Spring]
+    required: false
+
+  - name: usage
+    type: enum
+    values: [Casual, Sports, Formal, Ethnic, Smart Casual, Travel, Party, Home]
+    required: false

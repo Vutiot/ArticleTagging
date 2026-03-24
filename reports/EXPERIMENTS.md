@@ -1,0 +1,213 @@
+# Experiment Log
+
+## Project
+
+**ArticleTagging** — Fine-tuning Qwen3-VL-2B for structured attribute extraction from fashion product listings (title + image).
+
+Inspired by [How 1 hour of fine-tuning beat 3 weeks of RAG engineering](https://medium.com/leboncoin-tech) (leboncoin tech, Mar 2026).
+
+## Dataset
+
+**Source**: [Kaggle Fashion Product Images (Small)](https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small)
+
+| Metric | Value |
+|--------|-------|
+| Raw listings | 44,446 |
+| After cleaning | 32,398 |
+| Dropped (invalid attrs) | 843 |
+| Dropped (duplicates) | 11,200 |
+| Dropped (no image) | 5 |
+| Train | 25,918 |
+| Val | 3,239 |
+| Test | 3,241 |
+
+### Attributes to extract (7)
+
+| Attribute | Type | Unique values | Notes |
+|-----------|------|--------------|-------|
+| gender | enum | 5 | Men, Women, Boys, Girls, Unisex |
+| masterCategory | enum | 7 | Apparel, Accessories, Footwear, Personal Care, ... |
+| subCategory | enum | 43 | Topwear, Bottomwear, Watches, Shoes, ... |
+| articleType | string | 143 | Tshirts (16%), Shirts (7%), Casual Shoes (6%), ... long tail |
+| baseColour | enum | 41 | Black, White, Blue, Navy Blue, Grey, ... |
+| season | enum | 4 | Summer, Winter, Fall, Spring |
+| usage | enum | 8 | Casual, Sports, Formal, Ethnic, ... |
+
+### articleType distribution (top 20 / 143)
+
+| articleType | Count | % |
+|-------------|------:|--:|
+| Tshirts | 7,070 | 15.9% |
+| Shirts | 3,217 | 7.2% |
+| Casual Shoes | 2,846 | 6.4% |
+| Watches | 2,542 | 5.7% |
+| Sports Shoes | 2,036 | 4.6% |
+| Kurtas | 1,844 | 4.1% |
+| Tops | 1,762 | 4.0% |
+| Handbags | 1,759 | 4.0% |
+| Heels | 1,323 | 3.0% |
+| Sunglasses | 1,073 | 2.4% |
+| Wallets | 936 | 2.1% |
+| Flip Flops | 916 | 2.1% |
+| Sandals | 897 | 2.0% |
+| Briefs | 849 | 1.9% |
+| Belts | 813 | 1.8% |
+| Backpacks | 724 | 1.6% |
+| Socks | 686 | 1.5% |
+| Formal Shoes | 637 | 1.4% |
+| Perfume and Body Mist | 614 | 1.4% |
+| Jeans | 609 | 1.4% |
+| *... 123 more types* | | |
+
+---
+
+## Model
+
+**Qwen3-VL-2B-Instruct** — 2B parameter Vision-Language Model
+
+- Loaded in FP16 (~4 GB VRAM)
+- GPU: NVIDIA RTX 4070 Laptop (8 GB VRAM)
+- Inference: ~2-4s per sample (no batching, no vLLM)
+
+---
+
+## Experiments
+
+### Run 1: V0 Baseline — Naive Prompt (no valid values)
+
+**Date**: 2026-03-24
+**Samples**: 50 (random from test set, seed=42)
+
+**System prompt**:
+```
+You extract product attributes from the title and image.
+Respond with valid JSON only.
+Attributes to extract: gender, masterCategory, subCategory, articleType, baseColour, season, usage
+```
+
+**Hypothesis**: The base model can extract attributes from title + image without any guidance on valid values.
+
+#### Results
+
+| Attribute | Accuracy |
+|-----------|----------|
+| gender | 88.0% |
+| baseColour | 76.0% |
+| usage | 32.0% |
+| articleType | 8.0% |
+| masterCategory | 4.0% |
+| season | 4.0% |
+| subCategory | 2.0% |
+| **Exact Match** | **0.0%** |
+
+#### Per-category exact match
+
+| Category | Exact Match |
+|----------|-------------|
+| Apparel | 0.0% |
+| Accessories | 0.0% |
+| Footwear | 0.0% |
+| Personal Care | 0.0% |
+
+#### Analysis
+
+- **gender** (88%) and **baseColour** (76%): Model extracts these well from title text and image visual cues.
+- **masterCategory** (4%), **subCategory** (2%): Model invents its own taxonomy (e.g., "Shirts" instead of "Apparel", "Plaid" instead of "Topwear").
+- **articleType** (8%): Close but wrong format — "Shirt" instead of "Shirts", "Watch" instead of "Watches".
+- **season** (4%): Model defaults to "All" — cannot infer season from image.
+- **usage** (32%): Partially guessable from context.
+- **Exact match 0%**: Not a single sample got all 7 attributes correct.
+
+**Conclusion**: Without valid value constraints, the model understands the task but uses its own vocabulary. Matches the leboncoin article's V0 findings.
+
+---
+
+### Run 2: V0+ — Enum Values in Prompt
+
+**Date**: 2026-03-24
+**Samples**: 50 (same seed=42 for fair comparison)
+
+**System prompt** (1,332 chars):
+```
+You extract product attributes from the title and image.
+Respond with valid JSON only. Use ONLY values from the lists below.
+
+gender (valid values): Men, Women, Boys, Girls, Unisex
+masterCategory (valid values): Apparel, Accessories, Footwear, Personal Care, Free Items, Sporting Goods, Home
+subCategory (valid values): Topwear, Bottomwear, Innerwear, Dress, ... (43 values)
+articleType: free text string
+baseColour (valid values): Black, White, Blue, Navy Blue, ... (41 values)
+season (valid values): Summer, Winter, Fall, Spring
+usage (valid values): Casual, Sports, Formal, Ethnic, Smart Casual, Travel, Party, Home
+```
+
+**Hypothesis**: Listing valid enum values in the prompt will force the model to use the correct taxonomy, dramatically improving category/type attributes.
+
+#### Results
+
+| Attribute | V0 | V0+ | Delta |
+|-----------|------|------|-------|
+| gender | 88.0% | 98.0% | +10.0% |
+| masterCategory | 4.0% | 46.0% | **+42.0%** |
+| subCategory | 2.0% | 82.0% | **+80.0%** |
+| articleType | 8.0% | 10.0% | +2.0% |
+| baseColour | 76.0% | 86.0% | +10.0% |
+| season | 4.0% | 34.0% | **+30.0%** |
+| usage | 32.0% | 84.0% | **+52.0%** |
+| **Exact Match** | **0.0%** | **4.0%** | **+4.0%** |
+
+#### Per-category exact match
+
+| Category | V0 | V0+ | Delta |
+|----------|-----|------|-------|
+| Apparel | 0.0% | 9.1% | +9.1% |
+| Accessories | 0.0% | 0.0% | +0.0% |
+| Footwear | 0.0% | 0.0% | +0.0% |
+| Personal Care | 0.0% | 0.0% | +0.0% |
+
+#### Analysis
+
+- **Massive improvements** on enum-constrained attributes: subCategory (+80%), usage (+52%), masterCategory (+42%), season (+30%).
+- **articleType still at 10%**: Defined as free text (no enum), so no improvement. With 143 unique values, listing them all in the prompt would be impractical (leboncoin article's lesson: large label spaces overwhelm the model).
+- **Exact match only 4%**: The articleType bottleneck drags down exact match since it's required for a full match.
+- **gender near-perfect at 98%**: With valid values listed, the model almost never makes mistakes on simple attributes.
+
+**Conclusion**: Enum constraints in the prompt give huge gains for structured attributes. But free-text / large-label-space attributes remain the bottleneck. This is exactly where fine-tuning should shine — the model learns the exact label vocabulary from thousands of examples.
+
+---
+
+## Next Steps
+
+### Run 3 (planned): V2 — LoRA Fine-tuned
+
+- **Method**: LoRA fine-tuning with Unsloth (r=16, alpha=32, 4-bit QLoRA)
+- **Training data**: 25,918 samples, 3 epochs, batch_size=1, grad_accum=8
+- **Expected time**: ~1-2 hours on RTX 4070 (8GB)
+- **Hypothesis**: Fine-tuning will teach the model all 143 articleTypes and domain-specific patterns (season from image style, usage from product context), pushing exact match from 4% to 40%+ (per the leboncoin article's findings).
+
+### Run 4 (planned): V2 + Guided Decoding
+
+- Same fine-tuned model served with vLLM + `guided_json` schema constraints
+- Should push valid JSON rate to 99%+ and eliminate remaining enum violations
+
+---
+
+## Hardware
+
+| Component | Spec |
+|-----------|------|
+| GPU | NVIDIA GeForce RTX 4070 Laptop, 8 GB VRAM |
+| CUDA | 13.1 |
+| PyTorch | 2.11.0+cu130 |
+| Model | Qwen/Qwen3-VL-2B-Instruct (FP16, ~4 GB) |
+
+## Software
+
+| Package | Version |
+|---------|---------|
+| unsloth | 2025.11.1 |
+| trl | 0.23.0 |
+| transformers | 4.57.2 |
+| torch | 2.11.0+cu130 |
+| peft | 0.18.1 |
+| bitsandbytes | 0.49.2 |

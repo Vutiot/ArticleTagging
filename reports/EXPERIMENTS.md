@@ -245,6 +245,24 @@ usage (valid values): Casual, Sports, Formal, Ethnic, Smart Casual, Travel, Part
 
 **Conclusion**: Enum constraints in the prompt give huge gains for structured attributes. But free-text / large-label-space attributes remain the bottleneck. This is exactly where fine-tuning should shine — the model learns the exact label vocabulary from thousands of examples.
 
+#### Variance analysis (3 seeds x 50 samples)
+
+To verify results are stable, V0+ was run with seeds 42, 123, and 7.
+
+| Attribute | seed=42 | seed=123 | seed=7 | Mean | Std |
+|-----------|---------|----------|--------|------|-----|
+| gender | 98.0% | 100.0% | 98.0% | 98.7% | 1.2% |
+| masterCategory | 46.0% | 60.0% | 54.0% | 53.3% | 7.0% |
+| subCategory | 82.0% | 90.0% | 86.0% | 86.0% | 4.0% |
+| articleType | 10.0% | 14.0% | 12.0% | 12.0% | 2.0% |
+| baseColour | 86.0% | 82.0% | 84.0% | 84.0% | 2.0% |
+| season | 34.0% | 38.0% | 30.0% | 34.0% | 4.0% |
+| usage | 84.0% | 70.0% | 80.0% | 78.0% | 7.2% |
+| **Exact Match** | 4.0% | 4.0% | 0.0% | 2.7% | 2.3% |
+| **Avg per-attribute** | 62.9% | 64.9% | 63.4% | **63.7%** | **1.0%** |
+
+Results are stable: average per-attribute accuracy is 63.7% +/-1.0% across seeds. The noisiest attributes are `masterCategory` and `usage` (+/-7%), which are more context-dependent. 50 samples is sufficient for reliable comparison.
+
 ---
 
 ## Next Steps

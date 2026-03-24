@@ -134,12 +134,12 @@ graph TD
   style E2F1T5 fill:#22c55e
 
   style E3F1T1 fill:#22c55e
+  style E3F1T2 fill:#22c55e
 
   %% Ready (blue) — all blockers resolved
-  style E3F1T2 fill:#3b82f6
+  style E3F2T1 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E3F2T1 fill:#ef4444
   style E3F2T3 fill:#ef4444
   style E4F1T2 fill:#ef4444
   style E4F1T3 fill:#ef4444
@@ -264,7 +264,7 @@ graph TD
 
 ##### 🔴 E3-F1-T2: Implement train/validation/test splitting
 - blocked_by: [E3-F1-T1]
-- status: ready
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/dataset/splitting.py`. Stratified split (80/10/10 default) using sklearn `train_test_split`. Stratify by category field. Output: `data/processed/{name}/{train,val,test}.jsonl` + split stats JSON.
 
@@ -272,7 +272,7 @@ graph TD
 
 ##### 🔴 E3-F2-T1: Implement chat-format conversation builder
 - blocked_by: [E3-F1-T2]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: `src/article_tagging/dataset/formatter.py`. Core transformation from the article. Each record -> `{"messages": [{"role": "system", "content": "..."}, {"role": "user", "content": [{"type": "image", "image": "path"}, {"type": "text", "text": "Category: ...\nTitle: ...\nExtract: attr1, attr2"}]}, {"role": "assistant", "content": "{\"attr1\": \"val1\"}"}]}`. Support text-only mode (no image block). Configurable system prompt. **Prompt caching**: system prompt MUST be deterministic and static per schema (no timestamps, random IDs, or per-request dynamic content). The attribute list and category go in the system prompt since they're identical for all items in a category — this maximizes vLLM V1 prefix cache hits.
 
@@ -461,3 +461,4 @@ graph TD
 - E2-F2-T1: Implement CSV/JSON dataset importer
 - E2-F1-T5: Implement scrape CLI command and orchestrator
 - E3-F1-T1: Implement data cleaning pipeline
+- E3-F1-T2: Implement train/validation/test splitting

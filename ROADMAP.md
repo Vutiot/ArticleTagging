@@ -135,12 +135,12 @@ graph TD
 
   style E3F1T1 fill:#22c55e
   style E3F1T2 fill:#22c55e
+  style E3F2T1 fill:#22c55e
 
   %% Ready (blue) — all blockers resolved
-  style E3F2T1 fill:#3b82f6
+  style E3F2T3 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E3F2T3 fill:#ef4444
   style E4F1T2 fill:#ef4444
   style E4F1T3 fill:#ef4444
   style E4F1T4 fill:#ef4444
@@ -273,7 +273,7 @@ graph TD
 
 ##### 🔴 E3-F2-T1: Implement chat-format conversation builder
 - blocked_by: [E3-F1-T2]
-- status: ready
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/dataset/formatter.py`. Core transformation from the article. Each record -> `{"messages": [{"role": "system", "content": "..."}, {"role": "user", "content": [{"type": "image", "image": "path"}, {"type": "text", "text": "Category: ...\nTitle: ...\nExtract: attr1, attr2"}]}, {"role": "assistant", "content": "{\"attr1\": \"val1\"}"}]}`. Support text-only mode (no image block). Configurable system prompt. **Prompt caching**: system prompt MUST be deterministic and static per schema (no timestamps, random IDs, or per-request dynamic content). The attribute list and category go in the system prompt since they're identical for all items in a category — this maximizes vLLM V1 prefix cache hits.
 
@@ -285,7 +285,7 @@ graph TD
 
 ##### 🔴 E3-F2-T3: Implement the prepare CLI command
 - blocked_by: [E3-F2-T1, E3-F2-T2, E1-F1-T3]
-- status: pending
+- status: ready
 - effort: S
 - agent_hint: Wire `prepare` CLI: `--raw-data`, `--schema`, `--output-dir`, `--text-only`, `--split-ratio`. Pipeline: clean -> split -> format -> save as HuggingFace `Dataset` + JSONL copies. Print summary stats.
 
@@ -464,3 +464,4 @@ graph TD
 - E3-F1-T1: Implement data cleaning pipeline
 - E3-F1-T2: Implement train/validation/test splitting
 - E3-F2-T2: Implement image preprocessing for training
+- E3-F2-T1: Implement chat-format conversation builder

@@ -137,12 +137,12 @@ graph TD
   style E3F1T2 fill:#22c55e
   style E3F2T1 fill:#22c55e
   style E3F2T3 fill:#22c55e
+  style E4F1T2 fill:#22c55e
 
   %% Ready (blue) — all blockers resolved
-  style E4F1T2 fill:#3b82f6
+  style E4F1T3 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E4F1T3 fill:#ef4444
   style E4F1T4 fill:#ef4444
   style E5F1T1 fill:#ef4444
   style E5F1T3 fill:#ef4444
@@ -303,13 +303,13 @@ graph TD
 
 ##### 🔴 E4-F1-T2: Implement dataset loading for SFTTrainer
 - blocked_by: [E3-F2-T3, E4-F1-T1]
-- status: ready
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/training/data.py`. Load prepared HuggingFace Dataset, apply chat template via tokenizer, handle PIL image loading for multimodal. Use Unsloth's recommended data collator for vision models. Return train + eval datasets ready for SFTTrainer.
 
 ##### 🔴 E4-F1-T3: Implement training loop with SFTTrainer
 - blocked_by: [E4-F1-T1, E4-F1-T2]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: `src/article_tagging/training/trainer.py`. `SFTTrainer` with `SFTConfig(num_train_epochs=3, per_device_train_batch_size=1, gradient_accumulation_steps=8, learning_rate=2e-4, warmup_steps=50, eval_strategy="steps", eval_steps=100, save_strategy="steps", save_steps=100, load_best_model_at_end=True)`. `EarlyStoppingCallback(patience=3)`. Save LoRA adapter to `models/{run}/`. Log with `rich` + optional W&B.
 
@@ -466,3 +466,4 @@ graph TD
 - E3-F2-T2: Implement image preprocessing for training
 - E3-F2-T1: Implement chat-format conversation builder
 - E3-F2-T3: Implement the prepare CLI command
+- E4-F1-T2: Implement dataset loading for SFTTrainer

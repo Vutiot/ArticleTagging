@@ -165,19 +165,19 @@ graph TD
 
 ##### 🔴 E1-F1-T1: Initialize Python project with pyproject.toml
 - blocked_by: []
-- status: ready
+- status: done
 - effort: S
 - agent_hint: Create `pyproject.toml` with `src/article_tagging/` layout. Dependency groups: `[core]` (pydantic>=2, pyyaml, click, rich, Pillow), `[scraping]` (scrapy, playwright, beautifulsoup4, httpx), `[training]` (unsloth, trl>=0.15, transformers, datasets, peft, bitsandbytes, accelerate, wandb), `[serving]` (vllm>=0.11, openai, fastapi, uvicorn), `[dev]` (pytest, ruff, mypy). Add `.gitignore` for Python/ML artifacts (checkpoints, `__pycache__`, `.env`, wandb, `data/`, `models/`).
 
 ##### 🔴 E1-F1-T2: Create package module structure
 - blocked_by: [E1-F1-T1]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: Create `src/article_tagging/{scraping,dataset,training,inference,evaluation,cli}/__init__.py`. Create `configs/sites/` and `configs/schemas/` at repo root. Create gitignored `data/` and `models/` dirs.
 
 ##### E1-F1-T3: Setup CLI entry point with Click
 - blocked_by: [E1-F1-T2]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: Create `src/article_tagging/cli/main.py` with `@click.group()` and subcommands: `scrape`, `prepare`, `train`, `serve`, `evaluate`. Each is a stub. Register as `article-tagging` console script in `pyproject.toml`. Use `rich` for output.
 
@@ -185,19 +185,19 @@ graph TD
 
 ##### 🔴 E1-F2-T1: Design and implement Pydantic config models
 - blocked_by: [E1-F1-T2]
-- status: pending
+- status: done
 - effort: M
 - agent_hint: Create `src/article_tagging/configs/models.py`. Models: `SiteConfig` (name, base_url, listing_selector, detail_selectors dict, pagination, use_playwright, rate_limit), `DatasetConfig` (schema_path, split_ratio, text_only, system_prompt), `TrainingConfig` (model_name="Qwen/Qwen3-VL-2B-Instruct", load_in_4bit=True, lora_r=16, lora_alpha=32, target_modules, epochs=3, batch_size=1, gradient_accumulation_steps=8, learning_rate=2e-4, warmup_steps=50, eval_steps=100, early_stopping_patience=3), `ServingConfig` (model_path, gpu_memory_utilization=0.9, max_model_len=4096, port=8000), `EvalConfig`. All loadable from YAML via `load_config(path)`.
 
 ##### E1-F2-T2: Create example site config YAML templates
 - blocked_by: [E1-F2-T1]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: Create 2 templates in `configs/sites/`: one for a simple e-commerce site, one fully-commented reference showing all options. Each maps to `SiteConfig`. Key principle: new site = new YAML, zero code.
 
 ##### E1-F2-T3: Create dataset schema definition format
 - blocked_by: [E1-F2-T1]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: Create `configs/schemas/example.yaml` defining target attributes: `attributes: [{name, type: enum|string, values: [...], depends_on: optional}]`. This drives guided JSON decoding, validation, and eval. Dependencies are informational — the model learns them via fine-tuning.
 
@@ -209,7 +209,7 @@ graph TD
 
 ##### 🔴 E2-F1-T1: Implement base scraper interface and factory
 - blocked_by: [E1-F2-T1]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: Create `src/article_tagging/scraping/base.py`. Abstract `BaseScraper` with `scrape_listings()`, `scrape_detail()`, `download_images()`. Dataclasses: `RawListing{url, title, image_urls, attributes}`. `ScraperFactory` picks static vs Playwright based on `SiteConfig.use_playwright`. Images saved to `data/raw/{site}/images/{id}/`.
 
@@ -291,7 +291,7 @@ graph TD
 
 ##### ⚡ parallel group: B — E4-F1-T1: Implement model loading (Unsloth + 4-bit)
 - blocked_by: [E1-F2-T1]
-- status: pending
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/training/model.py`. `load_model(config)` using `FastVisionModel.from_pretrained("Qwen/Qwen3-VL-2B-Instruct", load_in_4bit=True)` then `FastVisionModel.get_peft_model(model, r=16, lora_alpha=32, target_modules=["q_proj","k_proj","v_proj","o_proj","gate_proj","up_proj","down_proj"])`. Use `gradient_checkpointing="unsloth"` for 8GB VRAM. Return (model, tokenizer). Support text-only models too.
 
@@ -333,7 +333,7 @@ graph TD
 
 ##### ⚡ parallel group: C — E5-F1-T2: Implement guided JSON schema generator
 - blocked_by: [E1-F2-T3]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/inference/schema_generator.py`. Generate JSON Schema from dataset schema YAML for vLLM's `guided_json` param. Output: `{"type": "object", "properties": {"attr": {"type": "string", "enum": [...]}}, "required": [...]}`. Per-category schemas if multi-category. Ensures 99%+ valid output.
 
@@ -357,7 +357,7 @@ graph TD
 
 ##### ⚡ parallel group: C — E6-F1-T1: Implement exact match and per-attribute accuracy
 - blocked_by: [E1-F2-T3]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/evaluation/metrics.py`. `exact_match(preds, truth) -> float` (all attrs correct), `per_attribute_accuracy(preds, truth, attrs) -> dict`, `category_breakdown()`. Case-insensitive comparison. Return `EvalResult` dataclass. Exact match is the primary metric (per the article: partial predictions still need correction).
 
@@ -430,6 +430,22 @@ graph TD
 
 **Key insight**: E4-F1-T1 (model loading), E5-F1-T2 (schema gen), and E6-F1-T1 (metrics) can all be built early in parallel with the scraping/dataset epics, significantly reducing wall-clock time.
 
+## Architecture Decisions
+
+- **Build backend**: `hatchling` chosen over setuptools/flit — lightweight, zero-config for `src/` layout, PyPA-recommended
+- **Config immutability**: All Pydantic models use `ConfigDict(frozen=True)` to prevent accidental mutation after loading
+- **Generic `load_config(path, model_cls)`**: Single function for all config types using `yaml.safe_load` + `model_validate`. Supports both per-concern YAMLs and unified `PipelineConfig`
+- **Python >=3.11**: Minimum version for `StrEnum`, better error messages; compatible with unsloth/vllm requirements
+- **`data/` and `models/` not tracked in git**: Gitignored; created at runtime by CLI commands rather than `.gitkeep` hack
+
 ## Done
 
-*(none yet)*
+- E1-F1-T1: Initialize Python project with pyproject.toml
+- E1-F1-T2: Create package module structure
+- E1-F1-T3: Setup CLI entry point with Click
+- E1-F2-T1: Design and implement Pydantic config models
+- E1-F2-T2: Create example site config YAML templates
+- E1-F2-T3: Create dataset schema definition format
+- E4-F1-T1: Implement model loading (Unsloth + 4-bit)
+- E5-F1-T2: Implement guided JSON schema generator
+- E6-F1-T1: Implement exact match and per-attribute accuracy

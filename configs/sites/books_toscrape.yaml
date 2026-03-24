@@ -1,0 +1,17 @@
+name: books_toscrape
+base_url: "http://books.toscrape.com"
+listing_selector: "article.product_pod h3 a@href"
+detail_selectors:
+  title: "div.product_main h1"
+  price: "p.price_color"
+  availability: "p.availability"
+  rating: "p.star-rating@class"
+  image: "div.item.active img@src"
+  description: "#product_description ~ p"
+  category: "ul.breadcrumb li:nth-child(3) a"
+pagination:
+  type: next_link
+  selector: "li.next a@href"
+  max_pages: 50
+use_playwright: false
+rate_limit: 0.5

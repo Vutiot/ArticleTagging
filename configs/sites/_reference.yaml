@@ -1,0 +1,60 @@
+# Reference configuration — shows all available options with explanations.
+# Copy this file, rename it, and customize for your target site.
+# Adding a new site = adding a new YAML file, zero code changes.
+
+# Unique identifier for this site (used in file names, logging, etc.)
+name: my_site
+
+# Root URL of the site to scrape.
+base_url: "https://example.com"
+
+# CSS selector for listing page links.
+# Use @attr to extract an attribute instead of text content (e.g. a@href).
+listing_selector: "div.product a@href"
+
+# Mapping of attribute names to CSS selectors on the detail page.
+# Each key becomes a column in the scraped dataset.
+# Use @attr suffix to extract an HTML attribute (e.g. img@src, span@class).
+detail_selectors:
+  title: "h1.product-title"
+  price: "span.price"
+  # image: "img.main-image@src"
+  # description: "div.description p"
+
+# Pagination settings — how to navigate through listing pages.
+pagination:
+  # type: how the site paginates.
+  #   next_link       — follow a "next page" link (default)
+  #   page_number     — increment a page parameter in the URL
+  #   infinite_scroll — scroll to load more (requires Playwright)
+  type: next_link
+
+  # selector: CSS selector to locate the next-page element.
+  # For next_link: the <a> tag whose href points to the next page.
+  # For page_number: not used (set url_pattern instead).
+  # For infinite_scroll: a sentinel element that triggers loading.
+  selector: "a.next-page@href"
+
+  # url_pattern: URL template with {page} placeholder (page_number type only).
+  # Example: "https://example.com/products?page={page}"
+  # url_pattern: null
+
+  # max_pages: stop after this many pages (safety limit).
+  max_pages: 100
+
+# Whether to use Playwright (headless browser) instead of plain HTTP.
+# Required for JavaScript-rendered sites and infinite_scroll pagination.
+use_playwright: false
+
+# Minimum delay in seconds between HTTP requests (politeness).
+rate_limit: 1.0
+
+# Optional hard cap on total listings to scrape (null = no limit).
+max_listings: null
+
+# Optional CSS selector to wait for before scraping (Playwright only).
+# Useful when content is loaded dynamically after initial page render.
+wait_for_selector: null
+
+# Optional extra HTTP headers sent with every request.
+headers: {}

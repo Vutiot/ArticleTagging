@@ -1,0 +1,25 @@
+# Dataset schema: defines the target attributes the model should extract.
+# Used for: guided JSON decoding, validation, evaluation metrics.
+name: phones
+category_field: phone_brand  # optional: used for stratified splitting
+
+attributes:
+  - name: phone_brand
+    type: enum
+    values: [Apple, Samsung, Huawei, Xiaomi, Google, OnePlus, Sony, Other]
+    required: true
+
+  - name: phone_model
+    type: string
+    required: true
+    depends_on: phone_brand  # informational — model learns this via fine-tuning
+
+  - name: phone_color
+    type: enum
+    values: [Black, White, Blue, Red, Green, Gold, Silver, Pink, Purple, Other]
+    required: false
+
+  - name: phone_storage
+    type: enum
+    values: ["64GB", "128GB", "256GB", "512GB", "1TB"]
+    required: false

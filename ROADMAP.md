@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-**ArticleTagging** generalizes leboncoin's fine-tuning approach (from their article "How 1 hour of fine-tuning beat 3 weeks of RAG engineering") into a reusable pipeline that works with any dataset obtainable from web scraping. The system scrapes product listings, prepares training data, fine-tunes **Qwen3-VL-2B** with LoRA via Unsloth, serves with vLLM + guided JSON decoding, and evaluates with exact-match metrics. The repo is currently empty — this roadmap defines the full build.
+**ArticleTagging** generalizes leboncoin's fine-tuning approach (from their article "How 1 hour of fine-tuning beat 3 weeks of RAG engineering") into a reusable pipeline that works with any dataset obtainable from web scraping. The system scrapes product listings, prepares training data, fine-tunes **Qwen3-VL-2B** with LoRA via Unsloth, serves with vLLM + guided JSON decoding + automatic prefix caching, and evaluates with exact-match metrics. The repo is currently empty — this roadmap defines the full build.
+
+**Prompt Caching Strategy**: vLLM V1 (default since v0.8.0) enables prefix caching automatically with zero overhead. The shared text system prompt prefix is cached in KV cache across requests. Images are in the user message and not prefix-cached. System prompts must be deterministic and static per schema to maximize cache hit rate.
 
 ## Dependency Graph
 
@@ -267,7 +269,7 @@ graph TD
 - blocked_by: [E3-F1-T2]
 - status: pending
 - effort: M
-- agent_hint: `src/article_tagging/dataset/formatter.py`. Core transformation from the article. Each record -> `{"messages": [{"role": "system", "content": "..."}, {"role": "user", "content": [{"type": "image", "image": "path"}, {"type": "text", "text": "Category: ...\nTitle: ...\nExtract: attr1, attr2"}]}, {"role": "assistant", "content": "{\"attr1\": \"val1\"}"}]}`. Support text-only mode (no image block). Configurable system prompt.
+- agent_hint: `src/article_tagging/dataset/formatter.py`. Core transformation from the article. Each record -> `{"messages": [{"role": "system", "content": "..."}, {"role": "user", "content": [{"type": "image", "image": "path"}, {"type": "text", "text": "Category: ...\nTitle: ...\nExtract: attr1, attr2"}]}, {"role": "assistant", "content": "{\"attr1\": \"val1\"}"}]}`. Support text-only mode (no image block). Configurable system prompt. **Prompt caching**: system prompt MUST be deterministic and static per schema (no timestamps, random IDs, or per-request dynamic content). The attribute list and category go in the system prompt since they're identical for all items in a category — this maximizes vLLM V1 prefix cache hits.
 
 ##### E3-F2-T2: Implement image preprocessing for training
 - blocked_by: [E3-F2-T1]
@@ -327,7 +329,7 @@ graph TD
 - blocked_by: [E4-F1-T4]
 - status: pending
 - effort: M
-- agent_hint: `src/article_tagging/inference/server.py`. Launch vLLM OpenAI-compatible server for Qwen3-VL-2B (FP16 or FP8, both fit 8GB). Config: `model_path`, `gpu_memory_utilization=0.9`, `max_model_len=4096`, `port=8000`. Support merged model or base+LoRA via `--enable-lora`. Exposes `/v1/chat/completions`.
+- agent_hint: `src/article_tagging/inference/server.py`. Launch vLLM OpenAI-compatible server for Qwen3-VL-2B (FP16 or FP8, both fit 8GB). Config: `model_path`, `gpu_memory_utilization=0.9`, `max_model_len=4096`, `port=8000`. Support merged model or base+LoRA via `--enable-lora`. Exposes `/v1/chat/completions`. **Prompt caching**: vLLM V1 (default since v0.8.0) enables prefix caching automatically with zero overhead — no explicit flag needed. Document this in the server config.
 
 ##### ⚡ parallel group: C — E5-F1-T2: Implement guided JSON schema generator
 - blocked_by: [E1-F2-T3]
@@ -339,7 +341,7 @@ graph TD
 - blocked_by: [E5-F1-T1, E5-F1-T2]
 - status: pending
 - effort: M
-- agent_hint: `src/article_tagging/inference/client.py`. Async client using `openai.AsyncOpenAI(base_url="http://localhost:8000/v1")`. Builds chat messages (system + user with text/images as base64 data URLs), attaches `extra_body={"guided_json": schema}`. Parses JSON response. Handles timeouts/retries.
+- agent_hint: `src/article_tagging/inference/client.py`. Async client using `openai.AsyncOpenAI(base_url="http://localhost:8000/v1")`. Builds chat messages (system + user with text/images as base64 data URLs), attaches `extra_body={"guided_json": schema}`. Parses JSON response. Handles timeouts/retries. **Prompt caching**: system prompt must always be the first message and identical across all requests for a given schema — this ensures vLLM V1's hash-based block matching reuses the cached KV state for the prefix.
 
 ##### 🔴 E5-F1-T4: Implement the serve CLI command
 - blocked_by: [E5-F1-T3, E1-F1-T3]

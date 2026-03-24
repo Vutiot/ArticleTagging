@@ -35,10 +35,68 @@ def scrape(config: Path, output_dir: Path, no_images: bool, max_listings: int | 
 
 
 @cli.command()
-@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to pipeline YAML config.")
-def prepare(config: Path) -> None:
+@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to dataset YAML config.")
+@click.option("--raw-data", type=click.Path(exists=True, path_type=Path), required=True, help="Path to raw JSONL from scraping.")
+@click.option("--output-dir", type=click.Path(path_type=Path), default=Path("data/processed"), show_default=True, help="Output directory for formatted splits.")
+@click.option("--image-dir", type=click.Path(exists=True, path_type=Path), default=None, help="Directory containing downloaded images.")
+def prepare(config: Path, raw_data: Path, output_dir: Path, image_dir: Path | None) -> None:
     """Prepare a fine-tuning dataset from scraped data."""
-    console.print(f"[yellow]prepare[/yellow] is not yet implemented. Config: {config}")
+    from article_tagging.configs.models import DatasetConfig
+    from article_tagging.dataset.cleaning import clean_listings, load_raw_jsonl
+    from article_tagging.dataset.formatter import format_dataset
+    from article_tagging.dataset.splitting import split_dataset
+    from article_tagging.inference.schema_generator import load_schema
+
+    dataset_config = load_config(config, DatasetConfig)
+    schema = load_schema(dataset_config.schema_path)
+
+    # Load and clean
+    console.print(f"[bold]Loading[/bold] {raw_data} ...")
+    listings = load_raw_jsonl(raw_data)
+    console.print(f"  Loaded {len(listings)} raw listings")
+
+    cleaned, stats = clean_listings(
+        listings,
+        schema,
+        deduplicate=dataset_config.deduplicate,
+        require_images=not dataset_config.text_only,
+    )
+    console.print(
+        f"  Cleaned: {stats.kept}/{stats.total} kept "
+        f"(-{stats.dropped_empty_title} empty, -{stats.dropped_invalid_attrs} invalid, "
+        f"-{stats.dropped_duplicates} dupes, -{stats.dropped_missing_images} no image)"
+    )
+
+    if stats.kept < dataset_config.min_samples:
+        console.print(f"[red]Only {stats.kept} samples after cleaning (min: {dataset_config.min_samples}). Aborting.[/red]")
+        raise SystemExit(1)
+
+    # Split
+    train, val, test = split_dataset(
+        cleaned,
+        dataset_config.split_ratio,
+        dataset_config.category_field,
+    )
+    console.print(f"  Split: train={len(train)}, val={len(val)}, test={len(test)}")
+
+    # Format into chat conversations
+    console.print("[bold]Formatting[/bold] into chat conversations ...")
+    train_fmt = format_dataset(train, schema, dataset_config.system_prompt, text_only=dataset_config.text_only, image_dir=image_dir)
+    val_fmt = format_dataset(val, schema, dataset_config.system_prompt, text_only=dataset_config.text_only, image_dir=image_dir)
+    test_fmt = format_dataset(test, schema, dataset_config.system_prompt, text_only=dataset_config.text_only, image_dir=image_dir)
+
+    # Save
+    import json
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for name, data in [("train", train_fmt), ("val", val_fmt), ("test", test_fmt)]:
+        path = output_dir / f"{name}.jsonl"
+        with path.open("w", encoding="utf-8") as fh:
+            for record in data:
+                fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    console.print(f"\n[bold green]Done![/bold green] Saved to {output_dir}/")
+    console.print(f"  train: {len(train_fmt)}, val: {len(val_fmt)}, test: {len(test_fmt)}")
 
 
 @cli.command()

@@ -136,12 +136,12 @@ graph TD
   style E3F1T1 fill:#22c55e
   style E3F1T2 fill:#22c55e
   style E3F2T1 fill:#22c55e
+  style E3F2T3 fill:#22c55e
 
   %% Ready (blue) — all blockers resolved
-  style E3F2T3 fill:#3b82f6
+  style E4F1T2 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E4F1T2 fill:#ef4444
   style E4F1T3 fill:#ef4444
   style E4F1T4 fill:#ef4444
   style E5F1T1 fill:#ef4444
@@ -285,7 +285,7 @@ graph TD
 
 ##### 🔴 E3-F2-T3: Implement the prepare CLI command
 - blocked_by: [E3-F2-T1, E3-F2-T2, E1-F1-T3]
-- status: ready
+- status: done
 - effort: S
 - agent_hint: Wire `prepare` CLI: `--raw-data`, `--schema`, `--output-dir`, `--text-only`, `--split-ratio`. Pipeline: clean -> split -> format -> save as HuggingFace `Dataset` + JSONL copies. Print summary stats.
 
@@ -303,7 +303,7 @@ graph TD
 
 ##### 🔴 E4-F1-T2: Implement dataset loading for SFTTrainer
 - blocked_by: [E3-F2-T3, E4-F1-T1]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: `src/article_tagging/training/data.py`. Load prepared HuggingFace Dataset, apply chat template via tokenizer, handle PIL image loading for multimodal. Use Unsloth's recommended data collator for vision models. Return train + eval datasets ready for SFTTrainer.
 
@@ -465,3 +465,4 @@ graph TD
 - E3-F1-T2: Implement train/validation/test splitting
 - E3-F2-T2: Implement image preprocessing for training
 - E3-F2-T1: Implement chat-format conversation builder
+- E3-F2-T3: Implement the prepare CLI command

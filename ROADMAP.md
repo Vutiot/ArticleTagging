@@ -113,11 +113,21 @@ graph TD
   E6F1T1 --> E7F2T1
   E7F2T1 --> E7F2T2
 
-  %% Critical path styling
-  style E1F1T1 fill:#ef4444
-  style E1F1T2 fill:#ef4444
-  style E1F2T1 fill:#ef4444
-  style E2F1T1 fill:#ef4444
+  %% Done (green)
+  style E1F1T1 fill:#22c55e
+  style E1F1T2 fill:#22c55e
+  style E1F1T3 fill:#22c55e
+  style E1F2T1 fill:#22c55e
+  style E1F2T2 fill:#22c55e
+  style E1F2T3 fill:#22c55e
+  style E4F1T1 fill:#22c55e
+  style E5F1T2 fill:#22c55e
+  style E6F1T1 fill:#22c55e
+
+  %% Ready (blue) — all blockers resolved
+  style E2F1T1 fill:#3b82f6
+
+  %% Critical path remaining (red)
   style E2F1T2 fill:#ef4444
   style E2F1T5 fill:#ef4444
   style E3F1T1 fill:#ef4444
@@ -135,21 +145,12 @@ graph TD
   style E6F1T4 fill:#ef4444
   style E7F1T1 fill:#ef4444
 
-  %% Ready tasks (no blockers)
-  style E1F1T1 fill:#3b82f6
-
-  %% Non-critical tasks
-  style E1F1T3 fill:#6b7280
-  style E1F2T2 fill:#6b7280
-  style E1F2T3 fill:#6b7280
+  %% Blocked / non-critical (gray)
   style E2F1T3 fill:#6b7280
   style E2F1T4 fill:#6b7280
   style E2F2T1 fill:#6b7280
   style E3F2T2 fill:#6b7280
-  style E4F1T1 fill:#6b7280
   style E4F1T5 fill:#6b7280
-  style E5F1T2 fill:#6b7280
-  style E6F1T1 fill:#6b7280
   style E7F1T2 fill:#6b7280
   style E7F2T1 fill:#6b7280
   style E7F2T2 fill:#6b7280

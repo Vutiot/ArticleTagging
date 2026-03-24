@@ -124,12 +124,17 @@ graph TD
   style E5F1T2 fill:#22c55e
   style E6F1T1 fill:#22c55e
 
+  %% Done (green) — scraping module
+  style E2F1T1 fill:#22c55e
+  style E2F1T2 fill:#22c55e
+  style E2F1T3 fill:#22c55e
+  style E2F1T4 fill:#22c55e
+  style E2F2T1 fill:#22c55e
+
   %% Ready (blue) — all blockers resolved
-  style E2F1T1 fill:#3b82f6
+  style E2F1T5 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E2F1T2 fill:#ef4444
-  style E2F1T5 fill:#ef4444
   style E3F1T1 fill:#ef4444
   style E3F1T2 fill:#ef4444
   style E3F2T1 fill:#ef4444
@@ -146,9 +151,6 @@ graph TD
   style E7F1T1 fill:#ef4444
 
   %% Blocked / non-critical (gray)
-  style E2F1T3 fill:#6b7280
-  style E2F1T4 fill:#6b7280
-  style E2F2T1 fill:#6b7280
   style E3F2T2 fill:#6b7280
   style E4F1T5 fill:#6b7280
   style E7F1T2 fill:#6b7280
@@ -216,25 +218,25 @@ graph TD
 
 ##### 🔴 E2-F1-T2: Implement static site scraper (httpx + BeautifulSoup)
 - blocked_by: [E2-F1-T1]
-- status: pending
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/scraping/static_scraper.py`. Uses `httpx` + `BeautifulSoup`. CSS selectors from `SiteConfig.detail_selectors` (e.g., `{title: "h1.product-title", images: "div.gallery img@src", brand: "span.brand"}`). `@attr` suffix extracts attribute. Handles pagination (next-link or page-number pattern). Rate limiting from config.
 
 ##### E2-F1-T3: Implement dynamic site scraper (Playwright)
 - blocked_by: [E2-F1-T1]
-- status: pending
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/scraping/dynamic_scraper.py`. Playwright headless async. Reuse selector extraction via shared `extract_fields()` utility. Config: `wait_for_selector`, `scroll_to_bottom`. `playwright install chromium` in setup.
 
 ##### E2-F1-T4: Implement image downloader with deduplication
 - blocked_by: [E2-F1-T1]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/scraping/images.py`. Async `httpx` client, SHA256 dedup, manifest JSON, Pillow resize to `max_image_size` (default 1024px longest side). Handle broken URLs, 404s, timeouts.
 
 ##### 🔴 E2-F1-T5: Implement scrape CLI command and orchestrator
 - blocked_by: [E2-F1-T2, E2-F1-T3, E2-F1-T4, E1-F1-T3]
-- status: pending
+- status: ready
 - effort: S
 - agent_hint: `src/article_tagging/scraping/orchestrator.py`. Loads `SiteConfig`, runs paginate -> scrape details -> download images -> save JSONL to `data/raw/{site}/listings.jsonl`. `asyncio.Semaphore` for concurrency. `--max-listings` flag. `rich` progress bars. Output: `{"id", "url", "title", "image_paths", "attributes"}`.
 
@@ -242,7 +244,7 @@ graph TD
 
 ##### ⚡ parallel group: A — E2-F2-T1: Implement CSV/JSON dataset importer
 - blocked_by: [E2-F1-T1]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/scraping/importers.py`. Import pre-existing CSV/JSON datasets (e.g., Kaggle, database exports) into the same JSONL format as the scraper. Small YAML mapping config for column-to-field mapping. Critical for users who already have labeled data and don't need to scrape.
 
@@ -450,3 +452,8 @@ graph TD
 - E4-F1-T1: Implement model loading (Unsloth + 4-bit)
 - E5-F1-T2: Implement guided JSON schema generator
 - E6-F1-T1: Implement exact match and per-attribute accuracy
+- E2-F1-T1: Implement base scraper interface and factory
+- E2-F1-T2: Implement static site scraper (httpx + BeautifulSoup)
+- E2-F1-T3: Implement dynamic site scraper (Playwright)
+- E2-F1-T4: Implement image downloader with deduplication
+- E2-F2-T1: Implement CSV/JSON dataset importer

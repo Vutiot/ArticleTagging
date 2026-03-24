@@ -139,24 +139,68 @@ def train(config: Path, dataset: Path, text_only: bool, run_name: str | None, us
 
 
 @cli.command()
-@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to pipeline YAML config.")
-@click.option("--port", type=int, default=8000, show_default=True, help="Port for the inference server.")
-def serve(config: Path, port: int) -> None:
+@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to serving YAML config.")
+@click.option("--port", type=int, default=None, help="Override port from config.")
+def serve(config: Path, port: int | None) -> None:
     """Start the vLLM inference server."""
-    console.print(f"[yellow]serve[/yellow] is not yet implemented. Config: {config}, port: {port}")
+    from article_tagging.configs.models import ServingConfig
+    from article_tagging.inference.server import launch_server
+
+    serving_config = load_config(config, ServingConfig)
+    if port is not None:
+        serving_config = ServingConfig(**{**serving_config.model_dump(), "port": port})
+
+    process = launch_server(serving_config)
+    try:
+        process.wait()
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Shutting down server...[/yellow]")
+        process.terminate()
+        process.wait()
 
 
 @cli.command()
-@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to pipeline YAML config.")
-def evaluate(config: Path) -> None:
+@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to evaluation YAML config.")
+@click.option("--compare-with", type=click.Path(exists=True, path_type=Path), multiple=True, help="Previous eval result JSONs to compare.")
+def evaluate(config: Path, compare_with: tuple[Path, ...]) -> None:
     """Evaluate model predictions against ground truth."""
-    console.print(f"[yellow]evaluate[/yellow] is not yet implemented. Config: {config}")
+    from article_tagging.configs.models import EvalConfig
+    from article_tagging.evaluation.evaluator import run_evaluation
+
+    eval_config = load_config(config, EvalConfig)
+    if compare_with:
+        eval_config = EvalConfig(**{
+            **eval_config.model_dump(),
+            "compare_with": list(compare_with),
+        })
+
+    result = asyncio.run(run_evaluation(eval_config))
+
+    if eval_config.compare_with:
+        from article_tagging.evaluation.metrics import load_eval_result
+        from article_tagging.evaluation.report import generate_comparison, save_report
+
+        all_results = [("current", result)]
+        for i, prev_path in enumerate(eval_config.compare_with):
+            name = prev_path.stem.replace("eval_result", f"run_{i}")
+            all_results.append((name, load_eval_result(prev_path)))
+
+        report = generate_comparison(all_results)
+        report_path = eval_config.output_dir / "comparison.md"
+        save_report(report, report_path)
+        console.print(f"Comparison report: [cyan]{report_path}[/cyan]")
 
 
 @cli.command()
 @click.option("--title", type=str, required=True, help="Product title text to classify.")
 @click.option("--image", type=click.Path(exists=True, path_type=Path), default=None, help="Optional product image path.")
 @click.option("--schema", "schema_path", type=click.Path(exists=True, path_type=Path), required=True, help="Path to the dataset schema YAML.")
-def predict(title: str, image: Path | None, schema_path: Path) -> None:
+@click.option("--server-url", type=str, default="http://localhost:8000", show_default=True, help="vLLM server URL.")
+def predict(title: str, image: Path | None, schema_path: Path, server_url: str) -> None:
     """Run a single prediction against a running server."""
-    console.print(f"[yellow]predict[/yellow] is not yet implemented. Title: {title!r}, image: {image}, schema: {schema_path}")
+    from article_tagging.inference.client import predict as predict_fn
+    from article_tagging.inference.schema_generator import load_schema
+
+    schema = load_schema(schema_path)
+    result = asyncio.run(predict_fn(title, schema, server_url, image_path=image))
+    console.print_json(data=result)

@@ -143,16 +143,14 @@ graph TD
 
   style E4F1T5 fill:#22c55e
   style E5F1T1 fill:#22c55e
+  style E5F1T3 fill:#22c55e
+  style E5F1T4 fill:#22c55e
+  style E6F1T2 fill:#22c55e
+  style E6F1T3 fill:#22c55e
+  style E6F1T4 fill:#22c55e
 
   %% Ready (blue) — all blockers resolved
-  style E5F1T3 fill:#3b82f6
-
-  %% Critical path remaining (red)
-  style E5F1T4 fill:#ef4444
-  style E6F1T2 fill:#ef4444
-  style E6F1T3 fill:#ef4444
-  style E6F1T4 fill:#ef4444
-  style E7F1T1 fill:#ef4444
+  style E7F1T1 fill:#3b82f6
 
   style E3F2T2 fill:#22c55e
 
@@ -347,13 +345,13 @@ graph TD
 
 ##### 🔴 E5-F1-T3: Implement inference client
 - blocked_by: [E5-F1-T1, E5-F1-T2]
-- status: ready
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/inference/client.py`. Async client using `openai.AsyncOpenAI(base_url="http://localhost:8000/v1")`. Builds chat messages (system + user with text/images as base64 data URLs), attaches `extra_body={"guided_json": schema}`. Parses JSON response. Handles timeouts/retries. **Prompt caching**: system prompt must always be the first message and identical across all requests for a given schema — this ensures vLLM V1's hash-based block matching reuses the cached KV state for the prefix.
 
 ##### 🔴 E5-F1-T4: Implement the serve CLI command
 - blocked_by: [E5-F1-T3, E1-F1-T3]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `article-tagging serve --config serving.yaml` starts vLLM server. `article-tagging predict --title "..." --image photo.jpg --schema phones.yaml` does single prediction via client. Useful for demos and quick testing.
 
@@ -371,19 +369,19 @@ graph TD
 
 ##### 🔴 E6-F1-T2: Implement batch evaluation pipeline
 - blocked_by: [E6-F1-T1, E5-F1-T3]
-- status: pending
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/evaluation/evaluator.py`. Load test JSONL, send each sample through inference client, collect predictions, compute metrics. `asyncio` with semaphore for concurrent requests. Save per-sample predictions for error analysis. Print `rich.table.Table` like the article's comparison tables.
 
 ##### 🔴 E6-F1-T3: Implement comparison report generator
 - blocked_by: [E6-F1-T2]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/evaluation/report.py`. Load multiple `EvalResult` JSONs, produce side-by-side Markdown table (like article's V0/V1/V2 table). Include exact match, per-category, per-attribute, deltas. Save to `reports/{name}.md`.
 
 ##### 🔴 E6-F1-T4: Implement the evaluate CLI command
 - blocked_by: [E6-F1-T3, E1-F1-T3]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `article-tagging evaluate --test-data ... --schema ... --server-url http://localhost:8000 --output-dir reports/`. `--compare-with` for comparison reports. Prints rich table and saves JSON + Markdown.
 
@@ -409,7 +407,7 @@ graph TD
 
 ##### ⚡ parallel group: D — E7-F2-T1: Write unit tests for core modules
 - blocked_by: [E3-F2-T3, E5-F1-T2, E6-F1-T1]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: `tests/test_config.py`, `tests/test_cleaning.py`, `tests/test_formatter.py`, `tests/test_schema_generator.py`, `tests/test_metrics.py`. Small inline fixtures, no large files. Focus on data transformations — most error-prone. Mock external deps.
 
@@ -473,3 +471,8 @@ graph TD
 - E4-F1-T4: Implement model export and merging
 - E4-F1-T5: Implement the train CLI command
 - E5-F1-T1: Implement vLLM server launcher
+- E5-F1-T3: Implement inference client
+- E5-F1-T4: Implement the serve CLI command
+- E6-F1-T2: Implement batch evaluation pipeline
+- E6-F1-T3: Implement comparison report generator
+- E6-F1-T4: Implement the evaluate CLI command

@@ -131,11 +131,12 @@ graph TD
   style E2F1T4 fill:#22c55e
   style E2F2T1 fill:#22c55e
 
+  style E2F1T5 fill:#22c55e
+
   %% Ready (blue) — all blockers resolved
-  style E2F1T5 fill:#3b82f6
+  style E3F1T1 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E3F1T1 fill:#ef4444
   style E3F1T2 fill:#ef4444
   style E3F2T1 fill:#ef4444
   style E3F2T3 fill:#ef4444
@@ -236,7 +237,7 @@ graph TD
 
 ##### 🔴 E2-F1-T5: Implement scrape CLI command and orchestrator
 - blocked_by: [E2-F1-T2, E2-F1-T3, E2-F1-T4, E1-F1-T3]
-- status: ready
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/scraping/orchestrator.py`. Loads `SiteConfig`, runs paginate -> scrape details -> download images -> save JSONL to `data/raw/{site}/listings.jsonl`. `asyncio.Semaphore` for concurrency. `--max-listings` flag. `rich` progress bars. Output: `{"id", "url", "title", "image_paths", "attributes"}`.
 
@@ -256,7 +257,7 @@ graph TD
 
 ##### 🔴 E3-F1-T1: Implement data cleaning pipeline
 - blocked_by: [E2-F1-T5, E1-F2-T3]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: `src/article_tagging/dataset/cleaning.py`. Normalize text (HTML entities, encoding, whitespace), validate attributes against schema YAML (drop invalid rows), deduplicate by title+attributes hash, filter missing images in multimodal mode. Log stats: total, dropped per reason, final count.
 
@@ -457,3 +458,4 @@ graph TD
 - E2-F1-T3: Implement dynamic site scraper (Playwright)
 - E2-F1-T4: Implement image downloader with deduplication
 - E2-F2-T1: Implement CSV/JSON dataset importer
+- E2-F1-T5: Implement scrape CLI command and orchestrator

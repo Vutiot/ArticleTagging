@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import click
 from rich.console import Console
+
+from article_tagging.configs.models import SiteConfig, load_config
 
 console = Console()
 
@@ -16,10 +19,19 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to pipeline YAML config.")
-def scrape(config: Path) -> None:
+@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to site YAML config.")
+@click.option("--output-dir", type=click.Path(path_type=Path), default=Path("data/raw"), show_default=True, help="Root output directory.")
+@click.option("--no-images", is_flag=True, default=False, help="Skip image downloading.")
+@click.option("--max-listings", type=int, default=None, help="Override max listings from config.")
+def scrape(config: Path, output_dir: Path, no_images: bool, max_listings: int | None) -> None:
     """Scrape listings from a configured site."""
-    console.print(f"[yellow]scrape[/yellow] is not yet implemented. Config: {config}")
+    from article_tagging.scraping.orchestrator import run_scrape
+
+    site_config = load_config(config, SiteConfig)
+    if max_listings is not None:
+        site_config = SiteConfig(**{**site_config.model_dump(), "max_listings": max_listings})
+
+    asyncio.run(run_scrape(site_config, output_dir, download_images_flag=not no_images))
 
 
 @cli.command()

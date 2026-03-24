@@ -45,7 +45,8 @@ def run_training(
         tokenizer: Pre-loaded tokenizer/processor.
 
     Returns:
-        Path to the output directory containing the saved adapter.
+        Tuple of ``(output_dir, model, tokenizer)`` so the caller can
+        run export (merge) after training.
 
     Raises:
         ImportError: If trl or transformers are not installed.
@@ -140,10 +141,6 @@ def run_training(
             )
         raise
 
-    # ── Save adapter ──────────────────────────────────────────────────
-    adapter_dir = Path(output_dir) / "adapter"
-    model.save_pretrained(str(adapter_dir))
-    tokenizer.save_pretrained(str(adapter_dir))
-    console.print(f"\n[bold green]Training complete![/bold green] Adapter saved to {adapter_dir}")
+    console.print("[bold green]Training complete![/bold green]")
 
-    return Path(output_dir)
+    return Path(output_dir), model, tokenizer

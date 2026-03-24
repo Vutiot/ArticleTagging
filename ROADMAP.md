@@ -141,12 +141,13 @@ graph TD
   style E4F1T3 fill:#22c55e
   style E4F1T4 fill:#22c55e
 
+  style E4F1T5 fill:#22c55e
+  style E5F1T1 fill:#22c55e
+
   %% Ready (blue) — all blockers resolved
-  style E4F1T5 fill:#3b82f6
-  style E5F1T1 fill:#3b82f6
+  style E5F1T3 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E5F1T3 fill:#ef4444
   style E5F1T4 fill:#ef4444
   style E6F1T2 fill:#ef4444
   style E6F1T3 fill:#ef4444
@@ -322,7 +323,7 @@ graph TD
 
 ##### E4-F1-T5: Implement the train CLI command
 - blocked_by: [E4-F1-T4, E1-F1-T3]
-- status: ready
+- status: done
 - effort: S
 - agent_hint: Wire `train` CLI: `--config`, `--dataset`, `--output-dir`, `--run-name`, `--wandb`. Flow: load config -> model -> data -> train -> export. Graceful CUDA OOM message suggesting batch_size=1 and gradient checkpointing.
 
@@ -334,7 +335,7 @@ graph TD
 
 ##### 🔴 E5-F1-T1: Implement vLLM server launcher
 - blocked_by: [E4-F1-T4]
-- status: ready
+- status: done
 - effort: M
 - agent_hint: `src/article_tagging/inference/server.py`. Launch vLLM OpenAI-compatible server for Qwen3-VL-2B (FP16 or FP8, both fit 8GB). Config: `model_path`, `gpu_memory_utilization=0.9`, `max_model_len=4096`, `port=8000`. Support merged model or base+LoRA via `--enable-lora`. Exposes `/v1/chat/completions`. **Prompt caching**: vLLM V1 (default since v0.8.0) enables prefix caching automatically with zero overhead — no explicit flag needed. Document this in the server config.
 
@@ -346,7 +347,7 @@ graph TD
 
 ##### 🔴 E5-F1-T3: Implement inference client
 - blocked_by: [E5-F1-T1, E5-F1-T2]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: `src/article_tagging/inference/client.py`. Async client using `openai.AsyncOpenAI(base_url="http://localhost:8000/v1")`. Builds chat messages (system + user with text/images as base64 data URLs), attaches `extra_body={"guided_json": schema}`. Parses JSON response. Handles timeouts/retries. **Prompt caching**: system prompt must always be the first message and identical across all requests for a given schema — this ensures vLLM V1's hash-based block matching reuses the cached KV state for the prefix.
 
@@ -470,3 +471,5 @@ graph TD
 - E4-F1-T2: Implement dataset loading for SFTTrainer
 - E4-F1-T3: Implement training loop with SFTTrainer
 - E4-F1-T4: Implement model export and merging
+- E4-F1-T5: Implement the train CLI command
+- E5-F1-T1: Implement vLLM server launcher

@@ -100,10 +100,42 @@ def prepare(config: Path, raw_data: Path, output_dir: Path, image_dir: Path | No
 
 
 @cli.command()
-@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to pipeline YAML config.")
-def train(config: Path) -> None:
+@click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to training YAML config.")
+@click.option("--dataset", type=click.Path(exists=True, path_type=Path), required=True, help="Path to prepared dataset directory (with train.jsonl, val.jsonl).")
+@click.option("--text-only", is_flag=True, default=False, help="Skip image loading for text-only training.")
+@click.option("--run-name", type=str, default=None, help="Override run name.")
+@click.option("--wandb", "use_wandb", is_flag=True, default=False, help="Enable W&B logging.")
+def train(config: Path, dataset: Path, text_only: bool, run_name: str | None, use_wandb: bool) -> None:
     """Fine-tune a VLM on the prepared dataset."""
-    console.print(f"[yellow]train[/yellow] is not yet implemented. Config: {config}")
+    from article_tagging.configs.models import TrainingConfig
+    from article_tagging.training.data import load_training_dataset
+    from article_tagging.training.export import export_model
+    from article_tagging.training.trainer import run_training
+
+    training_config = load_config(config, TrainingConfig)
+
+    # Override from CLI flags
+    overrides: dict = {}
+    if run_name is not None:
+        overrides["run_name"] = run_name
+    if use_wandb:
+        overrides["use_wandb"] = True
+    if overrides:
+        training_config = TrainingConfig(**{**training_config.model_dump(), **overrides})
+
+    train_path = dataset / "train.jsonl"
+    val_path = dataset / "val.jsonl"
+
+    console.print(f"[bold]Loading dataset[/bold] from {dataset} ...")
+    train_ds, val_ds = load_training_dataset(
+        train_path,
+        val_path if val_path.exists() else None,
+        text_only=text_only,
+    )
+    console.print(f"  train: {len(train_ds)}, val: {len(val_ds) if val_ds else 0}")
+
+    output_dir, model, tokenizer = run_training(training_config, train_ds, val_ds)
+    export_model(model, tokenizer, training_config)
 
 
 @cli.command()

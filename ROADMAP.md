@@ -139,12 +139,13 @@ graph TD
   style E3F2T3 fill:#22c55e
   style E4F1T2 fill:#22c55e
   style E4F1T3 fill:#22c55e
+  style E4F1T4 fill:#22c55e
 
   %% Ready (blue) — all blockers resolved
-  style E4F1T4 fill:#3b82f6
+  style E4F1T5 fill:#3b82f6
+  style E5F1T1 fill:#3b82f6
 
   %% Critical path remaining (red)
-  style E5F1T1 fill:#ef4444
   style E5F1T3 fill:#ef4444
   style E5F1T4 fill:#ef4444
   style E6F1T2 fill:#ef4444
@@ -315,13 +316,13 @@ graph TD
 
 ##### 🔴 E4-F1-T4: Implement model export and merging
 - blocked_by: [E4-F1-T3]
-- status: ready
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/training/export.py`. Save LoRA adapter separately via `model.save_pretrained()`. Merge into base via `model.save_pretrained_merged()` for standalone vLLM deployment. Save tokenizer alongside. Both FP16 merged and adapter-only modes.
 
 ##### E4-F1-T5: Implement the train CLI command
 - blocked_by: [E4-F1-T4, E1-F1-T3]
-- status: pending
+- status: ready
 - effort: S
 - agent_hint: Wire `train` CLI: `--config`, `--dataset`, `--output-dir`, `--run-name`, `--wandb`. Flow: load config -> model -> data -> train -> export. Graceful CUDA OOM message suggesting batch_size=1 and gradient checkpointing.
 
@@ -333,7 +334,7 @@ graph TD
 
 ##### 🔴 E5-F1-T1: Implement vLLM server launcher
 - blocked_by: [E4-F1-T4]
-- status: pending
+- status: ready
 - effort: M
 - agent_hint: `src/article_tagging/inference/server.py`. Launch vLLM OpenAI-compatible server for Qwen3-VL-2B (FP16 or FP8, both fit 8GB). Config: `model_path`, `gpu_memory_utilization=0.9`, `max_model_len=4096`, `port=8000`. Support merged model or base+LoRA via `--enable-lora`. Exposes `/v1/chat/completions`. **Prompt caching**: vLLM V1 (default since v0.8.0) enables prefix caching automatically with zero overhead — no explicit flag needed. Document this in the server config.
 
@@ -468,3 +469,4 @@ graph TD
 - E3-F2-T3: Implement the prepare CLI command
 - E4-F1-T2: Implement dataset loading for SFTTrainer
 - E4-F1-T3: Implement training loop with SFTTrainer
+- E4-F1-T4: Implement model export and merging

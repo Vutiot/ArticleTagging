@@ -152,8 +152,9 @@ graph TD
   style E6F1T4 fill:#ef4444
   style E7F1T1 fill:#ef4444
 
+  style E3F2T2 fill:#22c55e
+
   %% Blocked / non-critical (gray)
-  style E3F2T2 fill:#6b7280
   style E4F1T5 fill:#6b7280
   style E7F1T2 fill:#6b7280
   style E7F2T1 fill:#6b7280
@@ -278,7 +279,7 @@ graph TD
 
 ##### E3-F2-T2: Implement image preprocessing for training
 - blocked_by: [E3-F2-T1]
-- status: pending
+- status: done
 - effort: S
 - agent_hint: `src/article_tagging/dataset/image_processing.py`. Resize to max 1024px longest side, convert to RGB, handle CMYK/animated GIF (first frame), Pillow-based. Support file path ref (preferred, lazy loading) or base64 encoding. Qwen3-VL handles dynamic resolution natively.
 
@@ -462,3 +463,4 @@ graph TD
 - E2-F1-T5: Implement scrape CLI command and orchestrator
 - E3-F1-T1: Implement data cleaning pipeline
 - E3-F1-T2: Implement train/validation/test splitting
+- E3-F2-T2: Implement image preprocessing for training

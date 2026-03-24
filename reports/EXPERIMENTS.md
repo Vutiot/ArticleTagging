@@ -6,6 +6,77 @@
 
 Inspired by [How 1 hour of fine-tuning beat 3 weeks of RAG engineering](https://medium.com/leboncoin-tech) (leboncoin tech, Mar 2026).
 
+## Reproducing Results
+
+### Prerequisites
+
+```bash
+# 1. Create venv and install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[training]"
+pip install qwen-vl-utils
+
+# 2. Download dataset (requires Kaggle API key in ~/.kaggle/kaggle.json)
+mkdir -p data/raw/fashion
+kaggle datasets download paramaggarwal/fashion-product-images-small \
+  -p data/raw/fashion/ --unzip
+
+# 3. Import CSV to JSONL
+python3 -c "
+from pathlib import Path
+from article_tagging.scraping.importers import import_csv, export_jsonl, ImportMapping
+
+mapping = ImportMapping(
+    title_field='productDisplayName',
+    image_field='id',
+    attribute_fields={
+        'gender': 'gender', 'masterCategory': 'masterCategory',
+        'subCategory': 'subCategory', 'articleType': 'articleType',
+        'baseColour': 'baseColour', 'season': 'season', 'usage': 'usage',
+    },
+)
+listings = import_csv(Path('data/raw/fashion/styles.csv'), mapping)
+for l in listings:
+    if l.image_urls:
+        l.image_urls = [f'data/raw/fashion/images/{l.image_urls[0]}.jpg']
+export_jsonl(listings, Path('data/raw/fashion/listings.jsonl'))
+"
+
+# 4. Prepare dataset (clean, split, format)
+python -m article_tagging.cli.main prepare \
+  --config configs/dataset_fashion.yaml \
+  --raw-data data/raw/fashion/listings.jsonl \
+  --output-dir data/processed/fashion \
+  --image-dir data/raw/fashion/images
+```
+
+### Run V0 and V0+ baselines
+
+```bash
+source .venv/bin/activate
+
+# Both V0 and V0+ on 50 samples (default, ~5 min)
+python scripts/eval_baseline.py
+
+# Only V0+ on 100 samples
+python scripts/eval_baseline.py --run v0+ --samples 100
+
+# Full test set (3241 samples, ~3 hours)
+python scripts/eval_baseline.py --samples 0
+
+# Custom paths
+python scripts/eval_baseline.py \
+  --test-data data/processed/fashion/test.jsonl \
+  --schema configs/schemas/fashion.yaml \
+  --output-dir reports/ \
+  --seed 42
+```
+
+Results are saved to `reports/v0_baseline/` and `reports/v0_plus_prompt/`.
+
+---
+
 ## Dataset
 
 **Source**: [Kaggle Fashion Product Images (Small)](https://www.kaggle.com/datasets/paramaggarwal/fashion-product-images-small)

@@ -65,15 +65,52 @@ def run_training(
     except ImportError:
         raise ImportError(_TRL_INSTALL_MSG) from None
 
-    from transformers import EarlyStoppingCallback
+    from transformers import EarlyStoppingCallback, TrainerCallback
 
     from article_tagging.training.data import get_vision_data_collator
 
     # ── Data collator ─────────────────────────────────────────────────
     data_collator = get_vision_data_collator(model, tokenizer)
 
+    # ── Progress logging callback ─────────────────────────────────────
+    class ProgressCallback(TrainerCallback):
+        """Logs training progress to console and a log file."""
+
+        def __init__(self, log_path: Path) -> None:
+            self.log_path = log_path
+            self.log_path.parent.mkdir(parents=True, exist_ok=True)
+
+        def _write(self, msg: str) -> None:
+            console.print(msg)
+            with self.log_path.open("a", encoding="utf-8") as f:
+                f.write(msg + "\n")
+
+        def on_log(self, args, state, control, logs=None, **kwargs):  # noqa: ARG002
+            if logs:
+                step = state.global_step
+                total = state.max_steps
+                pct = step / total * 100 if total > 0 else 0
+                loss = logs.get("loss", logs.get("eval_loss", ""))
+                lr = logs.get("learning_rate", "")
+                parts = [f"Step {step}/{total} ({pct:.0f}%)"]
+                if loss != "":
+                    parts.append(f"loss={loss:.4f}")
+                if lr != "":
+                    parts.append(f"lr={lr:.2e}")
+                if "eval_loss" in logs:
+                    parts.append(f"eval_loss={logs['eval_loss']:.4f}")
+                self._write("  " + " | ".join(parts))
+
+        def on_train_begin(self, args, state, control, **kwargs):  # noqa: ARG002
+            self._write(f"[bold]Training started[/bold] — {state.max_steps} steps")
+
+        def on_epoch_begin(self, args, state, control, **kwargs):  # noqa: ARG002
+            self._write(f"\n[bold]Epoch {int(state.epoch) + 1}/{args.num_train_epochs}[/bold]")
+
     # ── Callbacks ─────────────────────────────────────────────────────
-    callbacks = []
+    output_dir = str(config.output_dir)
+    progress_log = Path(output_dir) / "training.log"
+    callbacks = [ProgressCallback(progress_log)]
     if val_dataset is not None and config.early_stopping_patience > 0:
         callbacks.append(
             EarlyStoppingCallback(early_stopping_patience=config.early_stopping_patience)
@@ -90,8 +127,6 @@ def run_training(
             logger.warning("wandb not installed — disabling W&B logging")
 
     # ── Training arguments ────────────────────────────────────────────
-    output_dir = str(config.output_dir)
-
     training_args = SFTConfig(
         output_dir=output_dir,
         num_train_epochs=config.epochs,
@@ -105,11 +140,13 @@ def run_training(
         save_steps=config.save_steps,
         load_best_model_at_end=val_dataset is not None,
         logging_steps=10,
+        logging_dir=output_dir + "/logs",
         report_to=report_to,
         run_name=config.run_name,
         remove_unused_columns=False,
         fp16=False,
         bf16=True,
+        disable_tqdm=False,
     )
 
     # ── Trainer ───────────────────────────────────────────────────────

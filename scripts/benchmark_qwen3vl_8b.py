@@ -37,7 +37,7 @@ REPORT_DIR = Path("reports/v3_qwen3vl_8b")
 TRAINING_CONFIG = Path("configs/training_fashion_qwen3vl_8b.yaml")
 SERVING_CONFIG = Path("configs/serving_fashion_qwen3vl_8b.yaml")
 DATASET_DIR = Path("data/processed/fashion")
-TEST_DATA = Path("data/processed/fashion/test_50_seed42.jsonl")
+TEST_DATA = Path("data/processed/fashion/test_500_seed42.jsonl")
 SCHEMA_PATH = Path("configs/schemas/fashion.yaml")
 V2_RESULTS = Path("reports/v2_guided/eval_result.json")
 

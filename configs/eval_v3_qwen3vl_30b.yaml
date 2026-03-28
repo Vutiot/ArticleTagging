@@ -1,0 +1,7 @@
+# Eval config for V3: Qwen3-VL-30B-A3B fine-tuned
+test_data_path: "data/processed/fashion/test_50_seed42.jsonl"
+schema_path: "configs/schemas/fashion.yaml"
+server_url: "http://localhost:8000"
+model_name: "adapter"
+output_dir: "reports/v3_qwen3vl_30b"
+batch_concurrency: 4

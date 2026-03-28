@@ -1,0 +1,8 @@
+# Serving config for fine-tuned fashion model (base + LoRA adapter)
+model_path: "Qwen/Qwen3-VL-2B-Instruct"
+adapter_path: "models/fashion-qwen3vl-2b/adapter"
+gpu_memory_utilization: 0.9
+max_model_len: 4096
+port: 8000
+host: "0.0.0.0"
+dtype: "auto"

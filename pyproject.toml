@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "article-tagging"
+version = "0.1.0"
+description = "Reusable VLM fine-tuning pipeline for structured attribute extraction from web-scraped data"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "click>=8.1",
+    "rich>=13.0",
+    "Pillow>=10.0",
+]
+
+[project.optional-dependencies]
+scraping = [
+    "scrapy>=2.11",
+    "playwright>=1.40",
+    "beautifulsoup4>=4.12",
+    "httpx>=0.25",
+]
+training = [
+    "unsloth",
+    "trl>=0.15",
+    "transformers>=4.45",
+    "datasets>=3.0",
+    "peft>=0.13",
+    "bitsandbytes>=0.44",
+    "accelerate>=1.0",
+    "wandb>=0.18",
+]
+serving = [
+    "vllm>=0.11",
+    "openai>=1.50",
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+all = [
+    "article-tagging[scraping,training,serving,dev]",
+]
+
+[project.scripts]
+article-tagging = "article_tagging.cli.main:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/article_tagging"]
+
+[tool.ruff]
+src = ["src"]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "TCH"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

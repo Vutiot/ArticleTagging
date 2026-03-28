@@ -130,6 +130,7 @@ def run_training(
     training_args = SFTConfig(
         output_dir=output_dir,
         num_train_epochs=config.epochs,
+        max_steps=config.max_steps,
         per_device_train_batch_size=config.batch_size,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
         learning_rate=config.learning_rate,

@@ -1,0 +1,8 @@
+# Serving config for Qwen3-VL-30B-A3B on Lightning AI L4 (24 GB VRAM)
+model_path: "Qwen/Qwen3-VL-30B-A3B-Instruct"
+adapter_path: "models/fashion-qwen3vl-30b-a3b/adapter"
+gpu_memory_utilization: 0.85
+max_model_len: 4096
+port: 8000
+host: "0.0.0.0"
+dtype: "auto"

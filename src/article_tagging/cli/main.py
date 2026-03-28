@@ -103,9 +103,10 @@ def prepare(config: Path, raw_data: Path, output_dir: Path, image_dir: Path | No
 @click.option("--config", type=click.Path(exists=True, path_type=Path), required=True, help="Path to training YAML config.")
 @click.option("--dataset", type=click.Path(exists=True, path_type=Path), required=True, help="Path to prepared dataset directory (with train.jsonl, val.jsonl).")
 @click.option("--text-only", is_flag=True, default=False, help="Skip image loading for text-only training.")
+@click.option("--max-steps", type=int, default=None, help="Override max training steps (overrides epochs).")
 @click.option("--run-name", type=str, default=None, help="Override run name.")
 @click.option("--wandb", "use_wandb", is_flag=True, default=False, help="Enable W&B logging.")
-def train(config: Path, dataset: Path, text_only: bool, run_name: str | None, use_wandb: bool) -> None:
+def train(config: Path, dataset: Path, text_only: bool, max_steps: int | None, run_name: str | None, use_wandb: bool) -> None:
     """Fine-tune a VLM on the prepared dataset."""
     from article_tagging.configs.models import TrainingConfig
     from article_tagging.training.data import load_training_dataset
@@ -116,6 +117,8 @@ def train(config: Path, dataset: Path, text_only: bool, run_name: str | None, us
 
     # Override from CLI flags
     overrides: dict = {}
+    if max_steps is not None:
+        overrides["max_steps"] = max_steps
     if run_name is not None:
         overrides["run_name"] = run_name
     if use_wandb:

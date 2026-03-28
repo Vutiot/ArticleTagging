@@ -1,0 +1,7 @@
+# Eval config for Run 4: V2 + guided JSON decoding
+test_data_path: "data/processed/fashion/test_50_seed42.jsonl"
+schema_path: "configs/schemas/fashion.yaml"
+server_url: "http://localhost:8000"
+model_name: "adapter"
+output_dir: "reports/v2_guided"
+batch_concurrency: 4

@@ -98,6 +98,7 @@ async def run_evaluation(config: EvalConfig) -> EvalResult:
         schema,
         config.server_url,
         system_prompt=system_prompt,
+        model_name=config.model_name,
         concurrency=config.batch_concurrency,
     )
 

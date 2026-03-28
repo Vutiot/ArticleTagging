@@ -375,11 +375,108 @@ Loss dropped 97% (3.01 → 0.08). Best eval loss at step 6400 (0.120). No overfi
 
 ---
 
-### Run 4 (planned): V2 + Guided Decoding
+### Run 4: V2 + Guided Decoding (vLLM `guided_json`)
 
-- Same fine-tuned model served with vLLM + `guided_json` schema constraints
-- Should eliminate remaining enum violations (e.g., "Grey" vs "Grey Melange")
-- Expected to push exact match from 58% to 65%+
+**Date**: 2026-03-26
+**Samples**: 50 (same seed=42)
+**Decoding**: Greedy (temperature=0) via vLLM OpenAI-compatible API
+
+The fine-tuned model was retrained from scratch (Qwen3-VL-2B-Instruct base) with the same config as Run 3. Training again early-stopped at **step 7000** with best eval loss **0.121** at step 6400 — nearly identical to the previous run (0.120).
+
+The model was served with vLLM 0.18.0 using `--enable-lora` and evaluated with `guided_json` schema constraints that force the output to match the JSON Schema (enum values, required fields, no extra properties).
+
+#### Hypothesis
+
+Guided JSON decoding should eliminate remaining enum violations (e.g., "Grey" instead of "Grey Melange") and push exact match above 58%.
+
+#### Configurations tested
+
+All 4 combinations of prompt style × guided decoding were evaluated for a complete picture:
+
+| Config | Prompt | Guided | EM | gender | master | sub | article | colour | season | usage |
+|--------|--------|--------|-----|--------|--------|-----|---------|--------|--------|-------|
+| V2 | V0 (short) | No | **58.0%** | 100% | 100% | 98% | 96% | 92% | 74% | 92% |
+| V2 | V0 (short) | Yes | **58.0%** | 100% | 100% | 98% | 96% | 92% | 74% | 92% |
+| V2 | V0+ (enums) | No | 52.0% | 94% | 98% | 100% | 96% | 92% | 68% | 92% |
+| V2 | V0+ (enums) | Yes | 52.0% | 94% | 98% | 100% | 96% | 92% | 68% | 92% |
+
+#### Per-category exact match (V0 prompt configs)
+
+| Category | V2 (no guided) | V2 + Guided |
+|----------|----------------|-------------|
+| Accessories | 71.4% | 71.4% |
+| Apparel | 40.9% | 40.9% |
+| Footwear | 69.2% | 69.2% |
+| Personal Care | 100.0% | 100.0% |
+
+#### Analysis
+
+**1. Guided decoding has zero impact on the fine-tuned model (58% = 58%)**
+
+The fine-tuned model with the V0 prompt (matching training distribution) already produces **100% valid JSON** with correct enum values. The `guided_json` constraint had nothing to fix — every token the model generated was already consistent with the schema.
+
+This means the remaining 42% errors are **semantic mistakes** (wrong attribute value, not wrong format), which guided decoding cannot address:
+- **season (74%)**: Inherently ambiguous from image/title alone
+- **baseColour (92%)**: Subtle shades ("Grey" vs "Grey Melange") where the model picks a valid but wrong value
+- **subCategory (98%)**: Rare edge cases
+
+**2. V0+ prompt hurts the fine-tuned model (58% → 52%)**
+
+Switching from the short V0 prompt (used during training) to the longer V0+ prompt (with enum values) causes a **distribution shift**. The model was never trained with enum values in the prompt, so providing them at inference degrades performance:
+- gender drops 100% → 94%
+- season drops 74% → 68%
+- Personal Care exact match drops 100% → 0%
+
+**Lesson**: Always match the inference prompt to the training prompt. Prompt engineering and fine-tuning are complementary strategies — mixing them naively can hurt.
+
+**3. Guided + V0+ are identical to non-guided equivalents**
+
+With temperature=0 (greedy decoding), guided JSON had zero effect in all configurations. The model's greedy output was already valid JSON in every case, so the FSM constraints were never activated.
+
+#### Conclusion
+
+For this dataset and model, **guided JSON decoding provides no improvement** over the fine-tuned model alone. The 58% exact match ceiling is bounded by semantic difficulty (season ambiguity, colour shade distinctions), not by format or vocabulary errors. Future improvements should focus on: (a) more training data, (b) larger models, (c) better image features for ambiguous attributes, or (d) multi-label approaches for season.
+
+---
+
+### Run 5: V3 — Qwen3-VL-30B-A3B (MoE VLM, ~3B active params)
+
+**Date**: TBD
+**Samples**: 50 (same seed=42)
+**Hardware**: Lightning AI Studio (NVIDIA L4, 24 GB VRAM)
+**Model**: Qwen3-VL-30B-A3B-Instruct (MoE: 30B total, ~3B active per token)
+
+#### Hypothesis
+
+A larger MoE VLM with ~3B active parameters (vs 2B dense) may improve on the
+hardest attributes (season, baseColour) where the smaller model plateaus at
+58% exact match. The MoE architecture keeps inference cost similar to the 2B
+model while providing access to a larger parameter space during training.
+
+#### Training configuration
+
+| Setting | V2 (2B) | V3 (30B-A3B) |
+|---------|---------|--------------|
+| Model | Qwen3-VL-2B-Instruct | Qwen3-VL-30B-A3B-Instruct |
+| Architecture | Dense 2B | MoE 30B (~3B active) |
+| Quantization | 4-bit QLoRA | 4-bit QLoRA |
+| LoRA rank | 16 | 16 |
+| LoRA alpha | 32 | 32 |
+| Target modules | q,k,v,o,gate,up,down_proj | q,k,v,o,gate,up,down_proj |
+| Epochs | 3 | 3 |
+| Batch size | 1 (effective: 8) | 1 (effective: 8) |
+| Learning rate | 2e-4 | 2e-4 |
+| GPU | RTX 4070 (8 GB) | L4 (24 GB) |
+
+#### Results
+
+*To be filled after running the benchmark on Lightning AI.*
+
+```
+python scripts/benchmark_qwen3vl_30b.py --phase all
+```
+
+Results will be saved to `reports/v3_qwen3vl_30b/eval_result.json`.
 
 ---
 
@@ -390,8 +487,12 @@ Loss dropped 97% (3.01 → 0.08). Best eval loss at step 6400 (0.120). No overfi
 | V0 | Naive prompt | 0% | 31% | 5 min |
 | V0+ | Enum values in prompt | 4% | 63% | 30 min |
 | **V2** | **LoRA fine-tuning (3 epochs)** | **58%** | **93%** | **7 hours training** |
+| V2+Guided | V2 + vLLM guided_json | 58% | 93% | +10 min setup |
+| V3 | Qwen3-VL-30B-A3B LoRA | TBD | TBD | TBD |
 
 The fine-tuned model achieves **93% average per-attribute accuracy** and **58% exact match** (all 7 attributes correct simultaneously), up from 0% exact match with naive prompting — confirming that a few hours of fine-tuning beats weeks of prompt engineering for structured extraction tasks.
+
+Guided JSON decoding provides a safety net for production (guarantees valid output) but does not improve accuracy for a well-trained model that already produces valid JSON.
 
 ---
 
@@ -415,3 +516,4 @@ The fine-tuned model achieves **93% average per-attribute accuracy** and **58% e
 | torch | 2.11.0+cu130 |
 | peft | 0.18.1 |
 | bitsandbytes | 0.49.2 |
+| vllm | 0.18.0 |

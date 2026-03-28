@@ -1,0 +1,37 @@
+# Quick 10-step training test for guided_json controlled generation
+model_name: "Qwen/Qwen3-VL-2B-Instruct"
+load_in_4bit: true
+
+# LoRA parameters
+lora_r: 16
+lora_alpha: 32
+target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# Training hyperparameters — 10 steps only (smoke test)
+epochs: 1
+max_steps: 10
+batch_size: 1
+gradient_accumulation_steps: 1
+learning_rate: 0.0002
+warmup_steps: 2
+gradient_checkpointing: "unsloth"
+
+# Evaluation & checkpointing
+eval_steps: 5
+save_steps: 10
+early_stopping_patience: 0
+
+# Output
+output_dir: "models/fashion-guided-json-test"
+merge_on_export: false
+run_name: "guided-json-test-10steps"
+
+# Logging
+use_wandb: false

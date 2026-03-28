@@ -31,6 +31,8 @@ async def predict(
     *,
     image_path: Path | None = None,
     system_prompt: str | None = None,
+    model_name: str = "default",
+    temperature: float = 0.0,
     timeout: float = 30.0,
     retries: int = 3,
 ) -> dict[str, Any]:
@@ -42,6 +44,7 @@ async def predict(
         server_url: Base URL of the vLLM server (no trailing ``/v1``).
         image_path: Optional local image path (encoded as base64 data URI).
         system_prompt: Override system prompt. If ``None``, built from schema.
+        temperature: Sampling temperature (0.0 = greedy/deterministic).
         timeout: Request timeout in seconds.
         retries: Number of retry attempts on failure.
 
@@ -90,8 +93,9 @@ async def predict(
     for attempt in range(retries):
         try:
             response = await client.chat.completions.create(
-                model="default",
+                model=model_name,
                 messages=messages,
+                temperature=temperature,
                 extra_body={"guided_json": guided_schema},
                 timeout=timeout,
             )
@@ -114,6 +118,8 @@ async def predict_batch(
     server_url: str = "http://localhost:8000",
     *,
     system_prompt: str | None = None,
+    model_name: str = "default",
+    temperature: float = 0.0,
     concurrency: int = 8,
     timeout: float = 30.0,
 ) -> list[dict[str, Any]]:
@@ -147,6 +153,8 @@ async def predict_batch(
                 server_url,
                 image_path=image_path,
                 system_prompt=system_prompt,
+                model_name=model_name,
+                temperature=temperature,
                 timeout=timeout,
             )
 

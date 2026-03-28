@@ -1,0 +1,37 @@
+# Training config for Qwen3-VL-8B on Lightning AI L4 (24 GB VRAM)
+# Dense 8B model — fits comfortably in 4-bit on 24GB
+model_name: "unsloth/Qwen3-VL-8B-Instruct"
+load_in_4bit: true
+
+# LoRA parameters (same as 2B/30B configs for fair comparison)
+lora_r: 16
+lora_alpha: 32
+target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+
+# Training hyperparameters (conservative for L4 24GB)
+epochs: 3
+batch_size: 1
+gradient_accumulation_steps: 8
+learning_rate: 0.0002
+warmup_steps: 50
+gradient_checkpointing: "unsloth"
+
+# Evaluation & checkpointing
+eval_steps: 200
+save_steps: 200
+early_stopping_patience: 3
+
+# Output
+output_dir: "models/fashion-qwen3vl-8b"
+merge_on_export: false  # save VRAM — merge later if needed
+run_name: "fashion-qwen3vl-8b"
+
+# Logging
+use_wandb: false

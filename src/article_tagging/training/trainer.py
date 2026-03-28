@@ -126,6 +126,13 @@ def run_training(
         except ImportError:
             logger.warning("wandb not installed — disabling W&B logging")
 
+    # ── Detect fp16/bf16 support ────────────────────────────────────
+    import torch
+
+    use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    use_fp16 = not use_bf16
+    console.print(f"  dtype: {'bf16' if use_bf16 else 'fp16'}")
+
     # ── Training arguments ────────────────────────────────────────────
     training_args = SFTConfig(
         output_dir=output_dir,
@@ -145,8 +152,8 @@ def run_training(
         report_to=report_to,
         run_name=config.run_name,
         remove_unused_columns=False,
-        fp16=False,
-        bf16=True,
+        fp16=use_fp16,
+        bf16=use_bf16,
         disable_tqdm=False,
     )
 

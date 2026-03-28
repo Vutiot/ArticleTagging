@@ -75,7 +75,7 @@ def run_train(max_steps: int | None = None) -> Path:
 
     if torch.cuda.is_available():
         gpu_name = torch.cuda.get_device_name(0)
-        gpu_mem = torch.cuda.get_device_properties(0).total_mem / 1024**3
+        gpu_mem = torch.cuda.get_device_properties(0).total_memory / 1024**3
         console.print(f"  GPU: {gpu_name} ({gpu_mem:.1f} GB)")
     else:
         console.print("[red]No GPU detected! Training will be very slow.[/red]")

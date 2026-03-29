@@ -170,7 +170,7 @@ def run_training(
 
     # ── Resume from checkpoint if available ─────────────────────────
     resume_from = None
-    ckpts = sorted(Path(output_dir).glob("checkpoint-*"))
+    ckpts = sorted(Path(output_dir).glob("checkpoint-*"), key=lambda p: int(p.name.split("-")[-1]))
     if ckpts:
         resume_from = str(ckpts[-1])
         console.print(f"[bold yellow]Resuming from {ckpts[-1].name}[/bold yellow]")

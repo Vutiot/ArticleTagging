@@ -168,6 +168,13 @@ def run_training(
         callbacks=callbacks,
     )
 
+    # ── Resume from checkpoint if available ─────────────────────────
+    resume_from = None
+    ckpts = sorted(Path(output_dir).glob("checkpoint-*"))
+    if ckpts:
+        resume_from = str(ckpts[-1])
+        console.print(f"[bold yellow]Resuming from {ckpts[-1].name}[/bold yellow]")
+
     # ── Train ─────────────────────────────────────────────────────────
     console.print("[bold]Starting training[/bold] ...")
     console.print(
@@ -176,7 +183,7 @@ def run_training(
     )
 
     try:
-        trainer.train()
+        trainer.train(resume_from_checkpoint=resume_from)
     except RuntimeError as e:
         if "out of memory" in str(e).lower():
             console.print(

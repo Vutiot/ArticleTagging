@@ -439,44 +439,88 @@ For this dataset and model, **guided JSON decoding provides no improvement** ove
 
 ---
 
-### Run 5: V3 — Qwen3-VL-30B-A3B (MoE VLM, ~3B active params)
+### Run 5: V3 — Qwen3-VL-8B (Dense 8B VLM)
 
-**Date**: TBD
+**Date**: 2026-03-29
 **Samples**: 50 (same seed=42)
-**Hardware**: Lightning AI Studio (NVIDIA L4, 24 GB VRAM)
-**Model**: Qwen3-VL-30B-A3B-Instruct (MoE: 30B total, ~3B active per token)
+**Hardware**: Kaggle (NVIDIA T4, 16 GB VRAM)
+**Model**: Qwen3-VL-8B-Instruct (dense 8B parameters)
 
 #### Hypothesis
 
-A larger MoE VLM with ~3B active parameters (vs 2B dense) may improve on the
-hardest attributes (season, baseColour) where the smaller model plateaus at
-58% exact match. The MoE architecture keeps inference cost similar to the 2B
-model while providing access to a larger parameter space during training.
+A 4x larger dense model (8B vs 2B) should improve on the hardest attributes (season, baseColour) where the 2B model plateaus at 58% exact match. The larger capacity should help with nuanced distinctions like colour shades and seasonal inference.
 
 #### Training configuration
 
-| Setting | V2 (2B) | V3 (30B-A3B) |
-|---------|---------|--------------|
-| Model | Qwen3-VL-2B-Instruct | Qwen3-VL-30B-A3B-Instruct |
-| Architecture | Dense 2B | MoE 30B (~3B active) |
+| Setting | V2 (2B) | V3 (8B) |
+|---------|---------|---------|
+| Model | Qwen3-VL-2B-Instruct | Qwen3-VL-8B-Instruct |
+| Architecture | Dense 2B | Dense 8B |
 | Quantization | 4-bit QLoRA | 4-bit QLoRA |
 | LoRA rank | 16 | 16 |
 | LoRA alpha | 32 | 32 |
 | Target modules | q,k,v,o,gate,up,down_proj | q,k,v,o,gate,up,down_proj |
-| Epochs | 3 | 3 |
+| Epochs | 3 | ~2 (interrupted at step 6600/9720) |
 | Batch size | 1 (effective: 8) | 1 (effective: 8) |
 | Learning rate | 2e-4 | 2e-4 |
-| GPU | RTX 4070 (8 GB) | L4 (24 GB) |
+| Warmup steps | 50 | 50 |
+| GPU | RTX 4070 (8 GB) | T4 (16 GB) |
+| dtype | bf16 | fp16 (T4 lacks bf16) |
+
+#### Training loss curve
+
+```
+Step     Loss     Eval Loss    LR
+──────   ──────   ─────────    ──────
+10       2.865                  2.0e-4
+50       0.330                  2.0e-4
+100      0.214                  2.0e-4
+200      0.174    0.184         2.0e-4
+500      0.158    0.152         1.9e-4
+1000     0.134    0.138         1.8e-4
+2000     0.109    0.124         1.6e-4
+3000     0.095    0.119         1.4e-4
+4000     0.085    0.118         1.2e-4
+5000     0.078    0.118         1.0e-4
+6000     0.075    0.118 (best)  7.5e-5
+6600     0.075    0.121         6.2e-5
+```
+
+Loss dropped 97% (2.87 → 0.075). Best eval loss at step 6000 (0.118). Training interrupted at ~2 epochs (step 6600 of 9720). Eval loss plateaued from step 4000 onwards, suggesting the model had largely converged.
 
 #### Results
 
-*To be filled after running the benchmark on Lightning AI.*
+| Attribute | V0 | V0+ | V2 (2B) | V3 (8B) | V2→V3 |
+|-----------|-----|------|---------|---------|-------|
+| gender | 88.0% | 98.0% | 96.0% | **100.0%** | +4.0% |
+| masterCategory | 4.0% | 46.0% | 98.0% | **98.0%** | +0.0% |
+| subCategory | 2.0% | 82.0% | 96.0% | **98.0%** | +2.0% |
+| articleType | 8.0% | 10.0% | 98.0% | **86.0%** | -12.0% |
+| baseColour | 76.0% | 86.0% | 92.0% | **88.0%** | -4.0% |
+| season | 4.0% | 34.0% | 76.0% | **90.0%** | **+16.0%** |
+| usage | 32.0% | 84.0% | 92.0% | **90.0%** | -2.0% |
+| **Exact Match** | **0.0%** | **4.0%** | **58.0%** | **64.0%** | **+6.0%** |
 
-```
-python scripts/benchmark_qwen3vl_30b.py --phase all
-```
+#### Per-category exact match
 
-Results will be saved to `reports/v3_qwen3vl_30b/eval_result.json`.
+| Category | V2 (2B) | V3 (8B) | Delta |
+|----------|---------|---------|-------|
+| Accessories | 71.4% | 69.2% | -2.2% |
+| Apparel | 40.9% | **79.2%** | **+38.3%** |
+| Footwear | 69.2% | 25.0% | -44.2% |
+| Free Items | 0.0% | 0.0% | +0.0% |
+| Personal Care | 100.0% | 50.0% | -50.0% |
+
+#### Analysis
+
+- **Exact match: 58% → 64%** — The 8B model improves overall, mostly driven by the large Apparel gain (+38.3%).
+- **season: 76% → 90%** — The biggest per-attribute win. The larger model is significantly better at inferring season from visual/textual cues, confirming the hypothesis.
+- **Apparel: 40.9% → 79.2%** — Massive improvement on the largest category, suggesting the 8B model better captures clothing-specific nuances.
+- **articleType: 98% → 86%** — Unexpected regression. The 8B model may be undertrained (only ~2 epochs vs 3), or the higher LR (2e-4, aggressive for 8B) caused less precise learning of the 143-value long tail.
+- **Footwear: 69.2% → 25.0%** and **Personal Care: 100% → 50%** — Notable per-category regressions, though small sample sizes (13 and 2 samples respectively) make these noisy.
+- **baseColour: 92% → 88%** — Slight regression, possibly related to the same undertrained / LR issue.
+
+**Key takeaway**: The 8B model shows promising improvements on the hardest attribute (season) and largest category (Apparel), pushing exact match from 58% to 64%. However, regressions on articleType and some categories suggest the model would benefit from: (a) completing the full 3 epochs, and (b) a lower learning rate (1e-4 recommended for 8B). The current results are from a partially trained model (~68% of planned steps).
 
 ---
 
@@ -486,13 +530,13 @@ Results will be saved to `reports/v3_qwen3vl_30b/eval_result.json`.
 |-----|--------|-------------|-------------|-------------------|
 | V0 | Naive prompt | 0% | 31% | 5 min |
 | V0+ | Enum values in prompt | 4% | 63% | 30 min |
-| **V2** | **LoRA fine-tuning (3 epochs)** | **58%** | **93%** | **7 hours training** |
+| V2 | LoRA fine-tuning 2B (3 epochs) | 58% | 93% | 7 hours training |
 | V2+Guided | V2 + vLLM guided_json | 58% | 93% | +10 min setup |
-| V3 | Qwen3-VL-30B-A3B LoRA | TBD | TBD | TBD |
+| **V3** | **LoRA fine-tuning 8B (~2 epochs)** | **64%** | **93%** | **Kaggle T4** |
 
-The fine-tuned model achieves **93% average per-attribute accuracy** and **58% exact match** (all 7 attributes correct simultaneously), up from 0% exact match with naive prompting — confirming that a few hours of fine-tuning beats weeks of prompt engineering for structured extraction tasks.
+The fine-tuned 2B model achieves **93% average per-attribute accuracy** and **58% exact match**, up from 0% with naive prompting. Scaling to 8B pushes exact match to **64%**, with the largest gains on season (+16%) and Apparel category (+38%). Guided JSON decoding provides a production safety net but does not improve accuracy for well-trained models.
 
-Guided JSON decoding provides a safety net for production (guarantees valid output) but does not improve accuracy for a well-trained model that already produces valid JSON.
+The 8B model was only partially trained (~2/3 epochs). A full training run with a tuned learning rate (1e-4) is expected to close the regressions on articleType and push exact match higher.
 
 ---
 
